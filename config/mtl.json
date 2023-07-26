@@ -1,0 +1,27 @@
+{
+    "test_name":                "MTL (AD vs CN) NDDR-CNN 2conv [1, 0] - ADNI1&ADNI2 balanced smoothed (lr*100 per nddr)",
+    "__comments":               "MTL (AD vs CN) NDDR-CNN 2conv [1, 0] - ADNI1&ADNI2 balanced smoothed (lr*100 per nddr)",
+    "process":                  "train_no_distr_loss",
+    "dataset":                  "ADNI1_prob_full_data",
+    "external_dataset":         ["ADNI1"],
+    "n_folds":                  10,
+    "folds":                    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "gpu_idx":                  0,
+    "seed":                     0,
+    "n_classes":                2,
+    "data_dir":                 "/mnt/mydrive/Matteo/data_adni1_adni2_smooth/",
+    "Data_dir_ex":              ["data/ADNI1/"],
+    "cnn": {
+        "fil_num":              10,
+        "drop_rate":            0.2,
+        "batch_size":           8,
+        "balanced":             0,
+        "learning_rate":        0.0001,
+        "train_epochs":         200,
+        "nddr_weight_init": {
+            "type":             "diagonal",
+            "params":           [0, 1]
+        },
+        "nddr_lr_mul":          100
+    }
+}
