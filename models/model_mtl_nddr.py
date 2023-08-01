@@ -25,7 +25,7 @@ class ConvLayer(nn.Module, ABC):
     
 
 class NDDRLayer(nn.Module, ABC):
-    def __init__(self, out_channels, init_weights=None):
+    def __init__(self, out_channels, init_weights_type, init_weights):
         super().__init__()
         self.conv1 = nn.Conv3d(2 * out_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
         self.BN1 = nn.BatchNorm3d(out_channels)
@@ -33,7 +33,7 @@ class NDDRLayer(nn.Module, ABC):
         self.BN2 = nn.BatchNorm3d(out_channels)
 
         # weights initialization
-        if init_weights:
+        if init_weights_type == 'diagonal':
             self.conv1.weight = nn.Parameter(torch.cat([
                 torch.eye(out_channels) * init_weights[0],
                 torch.eye(out_channels) * init_weights[1]
@@ -54,8 +54,9 @@ class NDDRLayer(nn.Module, ABC):
 
 
 class _CNN(nn.Module, ABC):
-    def __init__(self, fil_num, drop_rate, init_weights=None):
+    def __init__(self, fil_num, drop_rate, nddr_lr_mul=1, init_weights_type='random', init_weights=None):
         super(_CNN, self).__init__()
+        self.nddr_lr_mul = nddr_lr_mul
 
         self.clf_layers = nn.ModuleList()
         self.reg_layers = nn.ModuleList()
@@ -74,10 +75,10 @@ class _CNN(nn.Module, ABC):
         self.block_r_5 = ConvLayer(2 * fil_num, 2 * fil_num, 0.1, (3, 1, 0), (3, 1, 0))
         self.block_r_6 = ConvLayer(2 * fil_num, 2 * fil_num, 0.1, (3, 1, 1), (1, 1, 0))
         self.nddr_1 = NDDRLayer(fil_num, init_weights)
-        self.nddr_2 = NDDRLayer(2 * fil_num, init_weights)
-        self.nddr_3 = NDDRLayer(2 * fil_num, init_weights)
-        self.nddr_4 = NDDRLayer(2 * fil_num, init_weights)
-        self.nddr_5 = NDDRLayer(2 * fil_num, init_weights)
+        self.nddr_2 = NDDRLayer(2 * fil_num, init_weights_type, init_weights)
+        self.nddr_3 = NDDRLayer(2 * fil_num, init_weights_type, init_weights)
+        self.nddr_4 = NDDRLayer(2 * fil_num, init_weights_type, init_weights)
+        self.nddr_5 = NDDRLayer(2 * fil_num, init_weights_type, init_weights)
 
         self.dense_c = nn.Sequential(
             nn.Dropout(drop_rate),
@@ -153,14 +154,15 @@ class _CNN(nn.Module, ABC):
         x_r = self.dense_r(x_r)
         output_r = self.regress(x_r)
 
-        return output_c, output_r, None
+        return output_c, output_r
     
     def configure_optimizers(self, learning_rate):
+        # here the specific learning rate for nddr layer is set
         optimizer = torch.optim.AdamW(
             [
                 {'params': self.clf_layers.parameters()},
                 {'params': self.reg_layers.parameters()},
-                {'params': self.nddr_layers.parameters(), 'lr': learning_rate*100}
+                {'params': self.nddr_layers.parameters(), 'lr': learning_rate*self.nddr_lr_mul}
             ],
             lr=learning_rate,
             weight_decay=learning_rate*1e-2

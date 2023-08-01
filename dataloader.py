@@ -29,20 +29,11 @@ class ADNIDataset(Dataset):
         data = np.expand_dims(data, axis=0)
 
         return data, label, np.asarray(mmse_val).astype(np.float32), index
-
-
-
-class ADNISampler(Sampler):
-    def __init__(self, 
-                 sample_idx,
-                 data_source='../input/cassava-leaf-disease-classification/train.csv'):
-        super().__init__(data_source)
-        self.sample_idx = sample_idx
-        self.df_images = pd.read_csv(data_source)
-        
-    def __iter__(self):
-        image_ids = self.df_images['image_id'].loc[self.sample_idx]
-        return iter(image_ids)
     
-    def __len__(self):
-        return len(self.sample_idx)
+    def get_classes(self):
+        pass
+
+    def get_class_imbalance_ratio(self):
+        count0 = float(self.data_labels.value_counts('status')['AD'])
+        count1 = float(self.data_labels.value_counts('status')['CN'])
+        return count0 / count1
