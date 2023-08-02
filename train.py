@@ -76,7 +76,7 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
                         nddr_learning_rate_mul,
                         nddr_weight_init_type,
                         nddr_weight_init_params
-                        )
+                        ).to(device)
     wandb.save('models/model_'+cnn_config['model']+'.py')
     optimizer = model.configure_optimizers(learning_rate)
     criterion_clf = nn.CrossEntropyLoss(weight=torch.Tensor([1, imbalanced_ratio])).to(device)
@@ -96,14 +96,16 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
         train_epoch_mmse_true = []
         train_epoch_mmse_pred = []
 
-        for inputs, labels, demors in tqdm(train_dataloader, desc="Train epoch "+epoch):
+        for inputs, labels, demors in tqdm(train_dataloader, desc="Train epoch "+str(epoch)):
             inputs, labels, demors = inputs.to(device), labels.to(device), demors.to(device)
             model.zero_grad()
 
             clf_output, reg_output = model(inputs)
 
-            train_epoch_labels_true.append(labels.tolist())
-            train_epoch_labels_pred.append(clf_output.tolist())
+            train_epoch_labels_true.extend(labels.tolist())
+            train_epoch_labels_pred.extend(torch.argmax(clf_output, 1).tolist())
+            train_epoch_mmse_true.extend(demors.tolist())
+            train_epoch_mmse_pred.extend(reg_output.tolist())
             
             clf_loss = criterion_clf(clf_output, labels)
             reg_loss = criterion_reg(reg_output, torch.unsqueeze(demors, dim=1))
@@ -142,14 +144,14 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
             valid_epoch_mmse_true = []
             valid_epoch_mmse_pred = []
 
-            for inputs, labels, demors in tqdm(valid_dataloader, desc="Test Epoch "+epoch):
+            for inputs, labels, demors in tqdm(valid_dataloader, desc="Test Epoch "+str(epoch)):
                 inputs, labels, demors = inputs.to(device), labels.to(device), demors.to(device)
                 clf_output, reg_output = model(inputs)
 
-                valid_epoch_labels_true.append(labels.tolist())
-                valid_epoch_labels_pred.append(clf_output.tolist())
-                valid_epoch_mmse_true.append(demors.tolist())
-                valid_epoch_mmse_pred.append(reg_output.tolist())
+                valid_epoch_labels_true.extend(labels.tolist())
+                valid_epoch_labels_pred.extend(torch.argmax(clf_output, 1).tolist())
+                valid_epoch_mmse_true.extend(demors.tolist())
+                valid_epoch_mmse_pred.extend(reg_output.tolist())
 
                 clf_loss = criterion_clf(clf_output, labels)
                 reg_loss = criterion_reg(reg_output, torch.unsqueeze(demors, dim=1))
@@ -178,12 +180,14 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
                 preds=valid_epoch_labels_pred, y_true=valid_epoch_labels_true,
                 class_names=['CN', 'AD'])}, commit=False)
             save_checkpoint(model,
+                            epoch,
                             valid_acc=valid_acc,
                             valid_prec=valid_prec,
                             valid_recall=valid_recall,
                             valid_f1_score=valid_f1_score,
                             valid_spec=valid_spec,
-                            valid_conf_mat=valid_conf_mat)
+                            valid_conf_mat=valid_conf_mat,
+                            valid_rmse=valid_rmse)
             
         wandb.log({"val_loss": valid_epoch_loss,
                    "val_clf_loss": valid_epoch_clf_loss,
@@ -200,6 +204,7 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
         
 
 def save_checkpoint(model,
+                    epoch,
                     valid_acc=None,
                     valid_rmse=None,
                     valid_prec=None,
@@ -208,23 +213,24 @@ def save_checkpoint(model,
                     valid_spec=None,
                     valid_conf_mat=None,
                     ):
+    os.system("rm checkpoint/*")
+    # save model state dict in checkpoint dir
+    torch.save(model.state_dict(), f'checkpoint/best_model_{epoch}.pth')
+    wandb.run.summary["best_epoch"] = epoch
     if valid_acc:
         # save best classification scores in wandb summary
         wandb.run.summary["best_accuracy"] = valid_acc
         wandb.run.summary["best_precision"] = valid_prec
-        wandb.run.summary["best_accuracy"] = valid_recall
-        wandb.run.summary["best_accuracy"] = valid_f1_score
-        wandb.run.summary["best_accuracy"] = valid_spec
-        # save model state dict in checkpoint dir
-        torch.save(model.state_dict(), 'checkpoint/best_model.pth')
+        wandb.run.summary["best_recall"] = valid_recall
+        wandb.run.summary["best_f1_score"] = valid_f1_score
+        wandb.run.summary["best_specificity"] = valid_spec
         # save confusion matrix plot in checkpoint dir
         disp = ConfusionMatrixDisplay(confusion_matrix=valid_conf_mat)
         disp.plot()
-        plt.savefig("checkpoint/conf_mat.png")
+        plt.savefig(f"checkpoint/conf_mat_{epoch}.png")
     if valid_rmse:
         # save best regression score in wandb summary
-        wandb.run.summary["best_accuracy"] = valid_rmse
-
+        wandb.run.summary["best_rmse"] = valid_rmse
 
 
 def get_run_name(config):
@@ -236,12 +242,12 @@ def get_run_name(config):
         config['cnn']['learning_rate']
     )
     if 'nddr' in config['cnn']['model']:
-        run_name += "nddr_lr{}w{}".format(
+        run_name += "_nddr_lr{}w{}".format(
             config['cnn']['nddr_lr_mul'],
             config['cnn']['nddr_weight_init']['type']
         )
         if config['cnn']['nddr_weight_init']['type'] == 'diagonal':
-            run_name += '[' + ','.join(config['cnn']['nddr_weight_init']['params']) + ']'
+            run_name += '[' + ','.join([str(i) for i in config['cnn']['nddr_weight_init']['params']]) + ']'
 
     return run_name
 

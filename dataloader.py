@@ -28,7 +28,7 @@ class ADNIDataset(Dataset):
         data = np.load(data_path).astype(np.float32)
         data = np.expand_dims(data, axis=0)
 
-        return data, label, np.asarray(mmse_val).astype(np.float32), index
+        return data, label, np.asarray(mmse_val).astype(np.float32)
     
     def get_classes(self):
         pass

@@ -74,7 +74,7 @@ class _CNN(nn.Module, ABC):
         self.block_r_4 = ConvLayer(2 * fil_num, 2 * fil_num, 0.1, (3, 1, 1), (3, 1, 0))
         self.block_r_5 = ConvLayer(2 * fil_num, 2 * fil_num, 0.1, (3, 1, 0), (3, 1, 0))
         self.block_r_6 = ConvLayer(2 * fil_num, 2 * fil_num, 0.1, (3, 1, 1), (1, 1, 0))
-        self.nddr_1 = NDDRLayer(fil_num, init_weights)
+        self.nddr_1 = NDDRLayer(fil_num, init_weights_type, init_weights)
         self.nddr_2 = NDDRLayer(2 * fil_num, init_weights_type, init_weights)
         self.nddr_3 = NDDRLayer(2 * fil_num, init_weights_type, init_weights)
         self.nddr_4 = NDDRLayer(2 * fil_num, init_weights_type, init_weights)
