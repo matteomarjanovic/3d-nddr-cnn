@@ -9,7 +9,7 @@
     "gpu_idx":                  0,
     "seed":                     0,
     "n_classes":                2,
-    "data_dir":                 "/mnt/mydrive/Matteo/data_adni1_adni2_smooth/",
+    "data_dir":                 "/mnt/mydrive/Matteo/data_adni1_adni2_3class_1mm_noskull_prob_smooth/",
     "Data_dir_ex":              ["data/ADNI1/"],
     "cnn": {
         "model":                "mtl_nddr",

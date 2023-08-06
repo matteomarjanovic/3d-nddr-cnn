@@ -25,6 +25,7 @@ def main(config:dict):
     # initialize dataset
     dataset_df = pd.read_csv(os.path.join('datasets', config['dataset']+'.csv'))
     dataset = ADNIDataset(config['dataset'], config['data_dir'])
+    labels_dict = dataset.label_mapping
     imbalanced_ratio = dataset.get_class_imbalance_ratio()
 
     # define the k-fold cross validator
@@ -54,12 +55,12 @@ def main(config:dict):
 
         # start the training process
         if config['process'] == 'mtl':
-            train_mtl(config['cnn'], train_dataloader, valid_dataloader, device, imbalanced_ratio)
+            train_mtl(config['cnn'], train_dataloader, valid_dataloader, device, imbalanced_ratio, labels_dict)
         
         wandb.finish()
 
 
-def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced_ratio):
+def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced_ratio, label_dict):
     # parameters initialization
     fil_num = cnn_config['fil_num']
     drop_rate = cnn_config['drop_rate']
@@ -178,7 +179,7 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
             best_valid_rmse = valid_rmse
             wandb.log({"my_conf_mat_id" : wandb.plot.confusion_matrix(
                 preds=valid_epoch_labels_pred, y_true=valid_epoch_labels_true,
-                class_names=['CN', 'AD'])}, commit=False)
+                class_names=list(label_dict.keys()))}, commit=False)
             save_checkpoint(model,
                             epoch,
                             valid_acc=valid_acc,
@@ -187,7 +188,8 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
                             valid_f1_score=valid_f1_score,
                             valid_spec=valid_spec,
                             valid_conf_mat=valid_conf_mat,
-                            valid_rmse=valid_rmse)
+                            valid_rmse=valid_rmse,
+                            label_dict=label_dict)
             
         wandb.log({"val_loss": valid_epoch_loss,
                    "val_clf_loss": valid_epoch_clf_loss,
@@ -212,6 +214,7 @@ def save_checkpoint(model,
                     valid_f1_score=None,
                     valid_spec=None,
                     valid_conf_mat=None,
+                    label_dict=None
                     ):
     os.system("rm checkpoint/*")
     # save model state dict in checkpoint dir
@@ -225,7 +228,7 @@ def save_checkpoint(model,
         wandb.run.summary["best_f1_score"] = valid_f1_score
         wandb.run.summary["best_specificity"] = valid_spec
         # save confusion matrix plot in checkpoint dir
-        disp = ConfusionMatrixDisplay(confusion_matrix=valid_conf_mat)
+        disp = ConfusionMatrixDisplay(confusion_matrix=valid_conf_mat, display_labels=list(label_dict.keys()))
         disp.plot()
         plt.savefig(f"checkpoint/conf_mat_{epoch}.png")
     if valid_rmse:

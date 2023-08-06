@@ -12,7 +12,9 @@ class ADNIDataset(Dataset):
     def __init__(self, annotations_file, data_dir):
         self.data_labels = pd.read_csv(os.path.join('datasets', annotations_file+'.csv'))
         self.data_dir = data_dir
-        self.label_mapping = {'CN': 0, 'AD': 1, 'LMCI': 2}
+        # self.label_mapping = {'CN': 0, 'AD': 1, 'LMCI': 2}
+        self.label_mapping = self.get_classes()
+
 
     def __len__(self):
         return len(self.data_labels)
@@ -31,9 +33,17 @@ class ADNIDataset(Dataset):
         return data, label, np.asarray(mmse_val).astype(np.float32)
     
     def get_classes(self):
-        pass
+        res = self.data_labels['status'].value_counts().to_dict()
+        ordered_labels_list = [lab for lab in res.keys()]
+        ordered_labels_list.sort()
+        return {lab: val for val, lab in enumerate(ordered_labels_list)}
+
 
     def get_class_imbalance_ratio(self):
         count0 = float(self.data_labels.value_counts('status')['AD'])
         count1 = float(self.data_labels.value_counts('status')['CN'])
         return count0 / count1
+    
+
+if __name__ == '__main__':
+    dataset = ADNIDataset("ADNI1_prob_full_data", "/mnt/mydrive/Matteo/data_adni1_adni2_smooth/")
