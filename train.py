@@ -327,7 +327,7 @@ def train_stl_class(cnn_config, train_dataloader, valid_dataloader, device, imba
             # best_valid_rmse = valid_rmse
             wandb.log({"my_conf_mat_id" : wandb.plot.confusion_matrix(
                 preds=valid_epoch_labels_pred, y_true=valid_epoch_labels_true,
-                class_names=list(label_dict.keys()))}, commit=False)
+                class_names=label_dict)}, commit=False)
             save_checkpoint(model,
                             epoch,
                             valid_acc=valid_acc,
