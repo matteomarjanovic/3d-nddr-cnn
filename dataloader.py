@@ -21,7 +21,7 @@ class ADNIDataset(Dataset):
     
     def __getitem__(self, index):
         # get the label of the subject
-        label = self.label_mapping[self.data_labels.iloc[index, 1]]
+        label = self.label_mapping.index(self.data_labels.iloc[index, 1])
         # get the mmse of the subject
         mmse_val = self.data_labels.iloc[index, 2]
         # get the mri

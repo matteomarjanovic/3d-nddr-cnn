@@ -56,3 +56,8 @@ class _CNN_classification(nn.Module, ABC):
         x_c = self.dense_c(x_c)
         output_c = self.classify(x_c)
         return output_c
+    
+    def configure_optimizers(self, learning_rate):
+        optimizer = torch.optim.Adam(self.parameters(),
+                                     lr=learning_rate)
+        return optimizer

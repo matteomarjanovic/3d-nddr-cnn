@@ -58,3 +58,8 @@ class _CNN_regression(nn.Module, ABC):
         x_r = self.dense_r(x_r)
         output_r = self.regress(x_r)
         return output_r
+
+    def configure_optimizers(self, learning_rate):
+        optimizer = torch.optim.Adam(self.parameters(),
+                                     lr=learning_rate)
+        return optimizer
