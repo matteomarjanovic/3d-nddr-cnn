@@ -179,7 +179,7 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
             best_valid_rmse = valid_rmse
             wandb.log({"my_conf_mat_id" : wandb.plot.confusion_matrix(
                 preds=valid_epoch_labels_pred, y_true=valid_epoch_labels_true,
-                class_names=list(label_dict.keys()))}, commit=False)
+                class_names=label_dict)}, commit=False)
             save_checkpoint(model,
                             epoch,
                             valid_acc=valid_acc,
@@ -228,7 +228,7 @@ def save_checkpoint(model,
         wandb.run.summary["best_f1_score"] = valid_f1_score
         wandb.run.summary["best_specificity"] = valid_spec
         # save confusion matrix plot in checkpoint dir
-        disp = ConfusionMatrixDisplay(confusion_matrix=valid_conf_mat, display_labels=list(label_dict.keys()))
+        disp = ConfusionMatrixDisplay(confusion_matrix=valid_conf_mat, display_labels=label_dict)
         disp.plot()
         plt.savefig(f"checkpoint/conf_mat_{epoch}.png")
     if valid_rmse:

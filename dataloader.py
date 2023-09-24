@@ -33,17 +33,19 @@ class ADNIDataset(Dataset):
         return data, label, np.asarray(mmse_val).astype(np.float32)
     
     def get_classes(self):
+        # returns a list containing the 2 class labels sorted by alphabetical order
         res = self.data_labels['status'].value_counts().to_dict()
         ordered_labels_list = [lab for lab in res.keys()]
         ordered_labels_list.sort()
-        return {lab: val for val, lab in enumerate(ordered_labels_list)}
-
+        return ordered_labels_list
 
     def get_class_imbalance_ratio(self):
-        count0 = float(self.data_labels.value_counts('status')['AD'])
-        count1 = float(self.data_labels.value_counts('status')['CN'])
+        # returns the ratio between the two classes
+        count0 = float(self.data_labels.value_counts('status')[self.label_mapping[0]])
+        count1 = float(self.data_labels.value_counts('status')[self.label_mapping[1]])
         return count0 / count1
     
 
 if __name__ == '__main__':
+    # useful to debug the dataloader
     dataset = ADNIDataset("ADNI1_prob_full_data", "/mnt/mydrive/Matteo/data_adni1_adni2_smooth/")
