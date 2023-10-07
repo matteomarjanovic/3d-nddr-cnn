@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, SubsetRandomSampler
+from automaticWeightedLoss import AutomaticWeightedLoss
 
 from dataloader import ADNIDataset
 from sklearn.model_selection import StratifiedKFold
@@ -77,6 +78,8 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
     nddr_weight_init_type = cnn_config['nddr_weight_init']['type']
     nddr_weight_init_params = cnn_config['nddr_weight_init']['params'] if nddr_weight_init_type == 'diagonal' else None
     nddr_learning_rate_mul = cnn_config['nddr_lr_mul']
+    loss_weight_method = cnn_config['loss_weight_method']
+    awl = AutomaticWeightedLoss(2) if loss_weight_method == 'automatic' else None
     # model initialization
     model_module = importlib.import_module('models.model_'+cnn_config['model'])
     model_class = getattr(model_module, '_CNN')
@@ -84,7 +87,8 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
                         drop_rate,
                         nddr_learning_rate_mul,
                         nddr_weight_init_type,
-                        nddr_weight_init_params
+                        nddr_weight_init_params,
+                        awl
                         ).to(device)
     wandb.save('models/model_'+cnn_config['model']+'.py')
     optimizer = model.configure_optimizers(learning_rate)
@@ -118,7 +122,10 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
             
             clf_loss = criterion_clf(clf_output, labels)
             reg_loss = criterion_reg(reg_output, torch.unsqueeze(demors, dim=1))
-            loss = clf_loss + reg_loss
+            if awl:
+                loss = awl(clf_loss, reg_loss)
+            else:
+                loss = clf_loss + reg_loss
             loss.backward()
             optimizer.step()
 
@@ -162,7 +169,10 @@ def train_mtl(cnn_config, train_dataloader, valid_dataloader, device, imbalanced
 
                 clf_loss = criterion_clf(clf_output, labels)
                 reg_loss = criterion_reg(reg_output, torch.unsqueeze(demors, dim=1))
-                loss = clf_loss + reg_loss
+                if awl:
+                    loss = awl(clf_loss, reg_loss)
+                else:
+                    loss = clf_loss + reg_loss
 
                 valid_epoch_clf_loss += clf_loss
                 valid_epoch_reg_loss += reg_loss

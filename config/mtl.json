@@ -1,6 +1,5 @@
 {
-    "test_name":                "MTL (AD vs CN) NDDR-CNN 2conv [1, 0] - ADNI1&ADNI2 balanced smoothed (lr*100 per nddr)",
-    "__comments":               "MTL (AD vs CN) NDDR-CNN 2conv [1, 0] - ADNI1&ADNI2 balanced smoothed (lr*100 per nddr)",
+    "test_name":                "weight loss, dropout 0.3 - MTL (LMCI vs CN) NDDR-CNN[1, 0] - ADNI1 smoothed (lr*100 per nddr)",
     "process":                  "mtl",
     "dataset":                  "ADNI1_LMCI_CN",
     "external_dataset":         ["ADNI1"],
@@ -14,7 +13,7 @@
     "cnn": {
         "model":                "mtl_nddr",
         "fil_num":              10,
-        "drop_rate":            0.2,
+        "drop_rate":            0.3,
         "batch_size":           8,
         "balanced":             0,
         "learning_rate":        0.0001,
@@ -23,6 +22,7 @@
             "type":             "diagonal",
             "params":           [0, 1]
         },
-        "nddr_lr_mul":          100
+        "nddr_lr_mul":          100,
+        "loss_weight_method":   "automatic"
     }
 }

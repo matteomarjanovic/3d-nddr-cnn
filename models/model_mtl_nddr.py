@@ -54,9 +54,10 @@ class NDDRLayer(nn.Module, ABC):
 
 
 class _CNN(nn.Module, ABC):
-    def __init__(self, fil_num, drop_rate, nddr_lr_mul=1, init_weights_type='random', init_weights=None):
+    def __init__(self, fil_num, drop_rate, nddr_lr_mul=1, init_weights_type='random', init_weights=None, awl=None):
         super(_CNN, self).__init__()
         self.nddr_lr_mul = nddr_lr_mul
+        self.awl = awl
 
         self.clf_layers = nn.ModuleList()
         self.reg_layers = nn.ModuleList()
@@ -158,12 +159,15 @@ class _CNN(nn.Module, ABC):
     
     def configure_optimizers(self, learning_rate):
         # here the specific learning rate for nddr layer is set
+        params_list = [
+            {'params': self.clf_layers.parameters()},
+            {'params': self.reg_layers.parameters()},
+            {'params': self.nddr_layers.parameters(), 'lr': learning_rate*self.nddr_lr_mul}
+        ]
+        if self.awl: params_list.append({'params': self.awl.parameters(), 'weight_decay': 0})
+
         optimizer = torch.optim.AdamW(
-            [
-                {'params': self.clf_layers.parameters()},
-                {'params': self.reg_layers.parameters()},
-                {'params': self.nddr_layers.parameters(), 'lr': learning_rate*self.nddr_lr_mul}
-            ],
+            params_list,
             lr=learning_rate,
             weight_decay=learning_rate*1e-2
         )
